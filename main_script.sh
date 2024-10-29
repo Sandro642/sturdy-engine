@@ -1,49 +1,50 @@
 #!/bin/bash
 
-# Fonction pour afficher un message d'erreur
-function error() {
-    echo "Erreur : $1"
-    exit 1
-}
-
 # Demander les informations à l'utilisateur
 read -p "Entrez votre pseudo GitHub : " GITHUB_USERNAME
 read -p "Entrez le nom du dépôt distant : " REPO_NAME
-read -p "Entrez le nombre de contributions : " TOTAL_COMMITS
-read -p "Entrez le nombre de threads : " TOTAL_THREADS
-read -sp "Entrez votre token GitHub : " GITHUB_TOKEN
-echo
+read -p "Entrez le nombre de contributions : " CONTRIBUTIONS
+read -p "Entrez le nombre de threads : " THREADS
+read -p "Entrez votre token GitHub : " GITHUB_TOKEN
 
-# Vérifier que les entrées sont valides
-if ! [[ "$TOTAL_COMMITS" =~ ^[0-9]+$ ]] || ! [[ "$TOTAL_THREADS" =~ ^[0-9]+$ ]]; then
-    error "Le nombre de contributions et de threads doit être un nombre entier."
-fi
+# Demander à l'utilisateur s'il souhaite voir les threads
+read -p "Voulez-vous voir les $THREADS threads ? (oui/non) : " SEE_THREADS
 
-# Créer les répertoires pour les logs et les contributions
-mkdir -p logs contributions
-
-# Calculer le nombre de commits par thread
-COMMITS_PER_THREAD=$((TOTAL_COMMITS / TOTAL_THREADS))
-EXTRA_COMMITS=$((TOTAL_COMMITS % TOTAL_THREADS))
-
-# Démarrer les threads
-for ((i = 0; i < TOTAL_THREADS; i++)); do
-    THREAD_COMMITS=$COMMITS_PER_THREAD
-    # Distribuer les commits restants
-    if [[ $i -lt $EXTRA_COMMITS ]]; then
-        THREAD_COMMITS=$((THREAD_COMMITS + 1))
+# Lancer les threads
+for ((i = 0; i < THREADS; i++)); do
+    # Si l'utilisateur veut voir les threads, ouvrez une nouvelle fenêtre de terminal
+    if [[ "$SEE_THREADS" == "oui" ]]; then
+        # Ouvrir une nouvelle fenêtre de terminal et exécuter le script de commit
+        gnome-terminal -- bash -c "./commit_thread.sh \"$GITHUB_USERNAME\" \"$REPO_NAME\" $((CONTRIBUTIONS / THREADS)) \"$GITHUB_TOKEN\" \"contributions/thread_$i\"; exec bash"
+    else
+        # Exécuter le script de commit en arrière-plan
+        ./commit_thread.sh "$GITHUB_USERNAME" "$REPO_NAME" $((CONTRIBUTIONS / THREADS)) "$GITHUB_TOKEN" "contributions/thread_$i" &
     fi
-
-    # Créer un fichier pour les contributions du thread
-    THREAD_DIR="contributions/thread_$i"
-    mkdir -p "$THREAD_DIR"
-
-    # Exécuter le script de thread et afficher les logs dans la console
-    echo "Démarrage du thread $i avec $THREAD_COMMITS commits..."
-    bash commit_thread.sh "$GITHUB_USERNAME" "$REPO_NAME" "$THREAD_COMMITS" "$GITHUB_TOKEN" "$THREAD_DIR"
-
-    # Attendre que le thread soit terminé avant de continuer
-    echo "Thread $i terminé."
 done
 
+# Attendre que tous les threads se terminent
+wait
+
 echo "Tous les commits ont été réalisés et poussés."
+
+# Supprimer les dossiers des threads localement
+for ((i = 0; i < THREADS; i++)); do
+    # Supprimer le dossier des contributions pour chaque thread
+    rm -rf "contributions/thread_$i"
+done
+
+# Supprimer les dossiers des threads dans le dépôt distant
+# Vérifiez si le dépôt distant existe
+if git ls-remote --exit-code origin &> /dev/null; then
+    # Supprimer les dossiers dans le dépôt distant
+    for ((i = 0; i < THREADS; i++)); do
+        # Utiliser la commande git pour supprimer le dossier des contributions à distance
+        git rm -r "contributions/thread_$i"
+    done
+    git commit -m "Supprimer les dossiers des threads après les commits"
+    git push origin main
+else
+    echo "Le dépôt distant n'est pas accessible."
+fi
+
+echo "Les dossiers des threads ont été supprimés."
