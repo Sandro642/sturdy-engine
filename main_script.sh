@@ -1,63 +1,52 @@
 #!/bin/bash
 
-# Fonction pour vérifier si le dossier est un dépôt Git
-check_git_repo() {
-  if [ ! -d ".git" ]; then
-    echo "Initialisation d'un nouveau dépôt Git..."
-    git init
-  fi
-}
+# Récupérer les arguments
+GITHUB_USER=$1
+REPO_NAME=$2
+COMMITS=$3
+THREADS=$4
+GITHUB_TOKEN=$5
 
-# Demander les informations à l'utilisateur
-read -p "Nom d'utilisateur GitHub : " GITHUB_USER
-read -p "Nom du dépôt distant : " REPO_NAME
-read -p "Nombre de commits : " TOTAL_COMMITS
-read -p "Nombre de threads : " THREADS
-read -p "Token GitHub : " GITHUB_TOKEN
-
-# Vérification du dossier et initialisation si nécessaire
-check_git_repo
-
-# Ajouter le dépôt distant
-git remote add origin "https://github.com/$GITHUB_USER/$REPO_NAME.git" 2>/dev/null || echo "Le dépôt distant existe déjà."
-
-# Calculer le nombre de commits par thread
-COMMITS_PER_THREAD=$(( TOTAL_COMMITS / THREADS ))
-EXTRA_COMMITS=$(( TOTAL_COMMITS % THREADS )) # Commits supplémentaires à répartir
-
-# Créer un dossier pour les contributions
+# Créer un dossier pour les contributions si ce n'est pas déjà fait
 mkdir -p contributions
 
-# Demander si l'utilisateur veut démarrer le processus de contributions
+# Vérifier si le dépôt existe déjà
+if git ls-remote --exit-code "https://github.com/$GITHUB_USER/$REPO_NAME.git" &>/dev/null; then
+  echo "Le dépôt distant existe déjà."
+else
+  echo "Le dépôt distant n'existe pas."
+  exit 1
+fi
+
+# Demander si l'utilisateur veut commencer le processus
 read -p "Voulez-vous démarrer le processus de contributions (O/N) ? " START_PROCESS
 if [[ ! $START_PROCESS =~ ^[Oo]$ ]]; then
   echo "Processus annulé."
   exit 0
 fi
 
-# Créer et lancer les threads
-for ((i=1; i<=THREADS; i++)); do
-  # Créer une branche pour chaque thread
-  THREAD_BRANCH="thread-$i"
-  git checkout -b $THREAD_BRANCH
-
-  # Calculer le nombre de commits pour ce thread
-  if [ $i -le $EXTRA_COMMITS ]; then
-    THREAD_COMMITS=$(( COMMITS_PER_THREAD + 1 )) # Ajoute 1 commit supplémentaire pour les premiers threads
-  else
-    THREAD_COMMITS=$COMMITS_PER_THREAD
-  fi
-
-  # Exécuter le script de thread dans un nouveau terminal et garder la fenêtre ouverte
-  start bash commit_thread.sh "$GITHUB_USER" "$REPO_NAME" "$THREAD_COMMITS" "$GITHUB_TOKEN"
-
+# Créer des threads
+for ((t=1; t<=THREADS; t++)); do
+  BRANCH_NAME="thread-$t"
+  
+  # Créer une nouvelle branche
+  git checkout -b "$BRANCH_NAME"
+  
+  # Lancer le script de contribution dans un nouveau terminal
+  start bash commit_thread.sh "$GITHUB_USER" "$REPO_NAME" "$COMMITS" "$GITHUB_TOKEN" "$BRANCH_NAME"
+  
   # Revenir à la branche principale
   git checkout main
 done
 
-for ((i=1; i<=THREADS; i++)); do
-  git branch -d "thread-$i"
+# Attendre la fin des threads
+wait
+
+# Supprimer les branches de thread
+for ((t=1; t<=THREADS; t++)); do
+  BRANCH_NAME="thread-$t"
+  git branch -d "$BRANCH_NAME"
 done
 
-echo "Processus terminé. Appuyez sur une touche pour quitter..."
-read -n 1 -s  # Attend que l'utilisateur appuie sur une touche
+echo "Branches de thread supprimées. Processus terminé. Appuyez sur une touche pour quitter..."
+read -n 1 -s
