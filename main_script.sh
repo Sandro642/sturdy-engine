@@ -19,7 +19,7 @@ read -p "Token GitHub : " GITHUB_TOKEN
 check_git_repo
 
 # Ajouter le dépôt distant
-git remote add origin "https://github.com/$GITHUB_USER/$REPO_NAME.git"
+git remote add origin "https://github.com/$GITHUB_USER/$REPO_NAME.git" 2>/dev/null || echo "Le dépôt distant existe déjà."
 
 # Calculer le nombre de commits par thread
 COMMITS_PER_THREAD=$(( (TOTAL_COMMITS + THREADS - 1) / THREADS )) # On s'assure de répartir les commits correctement
