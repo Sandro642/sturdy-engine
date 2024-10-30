@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Récupérer les arguments
-GITHUB_USER=$1
-REPO_NAME=$2
-COMMITS=$3
-THREADS=$4
-GITHUB_TOKEN=$5
+# Demander les entrées si elles ne sont pas fournies
+read -p "Nom d'utilisateur GitHub : " GITHUB_USER
+read -p "Nom du dépôt distant : " REPO_NAME
+read -p "Nombre de commits : " COMMITS
+read -p "Nombre de threads : " THREADS
+read -p "Token GitHub : " GITHUB_TOKEN
 
 # Créer un dossier pour les contributions si ce n'est pas déjà fait
 mkdir -p contributions
