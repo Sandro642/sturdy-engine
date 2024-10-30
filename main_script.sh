@@ -16,6 +16,9 @@ read -p "Entrez votre token GitHub : " GITHUB_TOKEN
 # Calculer le nombre de commits par thread
 COMMITS_PER_THREAD=$((COMMITS / THREADS))
 
+# Créer un dossier pour les contributions
+mkdir -p contributions
+
 # Boucle pour créer des branches et démarrer des threads
 for ((i=1; i<=THREADS; i++)); do
   BRANCH_NAME="thread-$i"
@@ -31,3 +34,11 @@ for ((i=1; i<=THREADS; i++)); do
 done
 
 echo "Tous les threads ont été lancés."
+
+# Attendre que tous les threads soient terminés
+wait
+
+# Supprimer le dossier des contributions
+rm -rf contributions
+
+echo "Le dossier des contributions a été supprimé."
