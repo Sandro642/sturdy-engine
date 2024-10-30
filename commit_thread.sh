@@ -1,63 +1,30 @@
 #!/bin/bash
 
-# Récupérer les arguments ou demander les valeurs si non fournies
-GITHUB_USER=${1}
-REPO_NAME=${2}
-COMMITS=${3}
-GITHUB_TOKEN=${4}
-BRANCH_NAME=${5}
+GITHUB_USER=$1
+REPO_NAME=$2
+COMMITS=$3
+GITHUB_TOKEN=$4
+BRANCH_NAME=$5
 
-# Si les arguments ne sont pas fournis, demander les valeurs
-if [ -z "$GITHUB_USER" ]; then
-  read -p "Nom d'utilisateur GitHub : " GITHUB_USER
-fi
+# Changer de branche
+git checkout $BRANCH_NAME
 
-if [ -z "$REPO_NAME" ]; then
-  read -p "Nom du dépôt distant : " REPO_NAME
-fi
-
-if [ -z "$COMMITS" ]; then
-  read -p "Nombre de commits : " COMMITS
-fi
-
-if [ -z "$GITHUB_TOKEN" ]; then
-  read -p "Token GitHub : " GITHUB_TOKEN
-fi
-
-# Changer vers le bon dépôt
-cd "$REPO_NAME" || exit
-
-# Créer un dossier pour les contributions si ce n'est pas déjà fait
-mkdir -p contributions
-
-# Passer à la branche de thread
-git checkout "$BRANCH_NAME"
-
-# Créer des contributions
+# Effectuer les commits
 for ((i=1; i<=COMMITS; i++)); do
-  # Créer un fichier de contribution
-  echo "Contribution $i de $GITHUB_USER dans le dépôt $REPO_NAME" > "contributions/contribution_thread_$i.txt"
+  # Créer un fichier avec un message de commit
+  echo "Contribution $i dans la branche $BRANCH_NAME" > "contribution_$i.txt"
   
-  # Ajouter le fichier à l'index
-  git add "contributions/contribution_thread_$i.txt"
-  
-  # Faire un commit
-  git commit -m "Ajout de contribution $i de $GITHUB_USER"
-  
-  echo "Contribution $i ajoutée."
-  sleep 1 # Ajouter un délai pour éviter les conflits
+  # Ajouter et committer le fichier
+  git add "contribution_$i.txt"
+  git commit -m "Contribution $i"
 done
 
 # Pousser les changements vers le dépôt distant
-git push origin "$BRANCH_NAME"
+git push https://$GITHUB_USER:$GITHUB_TOKEN@github.com/$GITHUB_USER/$REPO_NAME.git $BRANCH_NAME
 
-echo "Contributions terminées pour le thread $BRANCH_NAME."
+# Fusionner la branche avec la branche principale
+git checkout main
+git merge $BRANCH_NAME
+git push https://$GITHUB_USER:$GITHUB_TOKEN@github.com/$GITHUB_USER/$REPO_NAME.git main
 
-# Demander si l'utilisateur veut fermer la fenêtre
-read -p "Voulez-vous fermer cette fenêtre ? (O/N) " CLOSE_WINDOW
-if [[ $CLOSE_WINDOW =~ ^[Oo]$ ]]; then
-  exit 0
-else
-  echo "La fenêtre restera ouverte."
-  read -p "Appuyez sur une touche pour continuer..."
-fi
+echo "Contributions envoyées vers le dépôt distant."
