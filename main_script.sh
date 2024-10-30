@@ -1,49 +1,68 @@
 #!/bin/bash
 
-# Demander les informations de l'utilisateur
-read -p "Entrez votre pseudo GitHub : " username
+# Variables
+read -p "Entrez votre pseudo GitHub : " github_user
 read -p "Entrez le nom du dépôt distant : " repo_name
-read -p "Entrez le nombre de contributions : " num_contributions
-read -p "Entrez le nombre de threads : " num_threads
+read -p "Entrez le nombre de contributions : " contribution_count
+read -p "Entrez le nombre de threads : " thread_count
 read -s -p "Entrez votre token GitHub : " github_token
-echo
-read -p "Voulez-vous voir les threads ? (oui/non) : " voir_threads
+echo ""
+read -p "Voulez-vous voir les threads ? (oui/non) : " show_threads
 
-# Calculer le nombre de commits par thread
-commits_per_thread=$((num_contributions / num_threads))
+# Crée un verrou temporaire
+LOCKFILE=.git_commit_lock
 
-# Créer les contributions dans chaque thread
-for ((i=0; i<num_threads; i++)); do
-    (
-        # Nom de la branche pour chaque thread
-        thread_branch="thread_branch_$i"
-        git checkout -b "$thread_branch" main
+# Fonction pour gérer les commits
+function commit_contribution() {
+    local thread_id=$1
+    local count=1
 
-        # Créer les commits pour ce thread
-        for ((j=1; j<=commits_per_thread; j++)); do
-            # Créer un fichier unique pour chaque commit
-            touch "contributions/thread_$i/commit_$j.txt"
-            echo "Contribution $j par $username" > "contributions/thread_$i/commit_$j.txt"
-            git add "contributions/thread_$i/commit_$j.txt"
-            git commit -m "Ajout du commit $j par $username"
-            
-            # Affichage conditionnel des logs
-            if [ "$voir_threads" = "oui" ]; then
-                echo "Thread $i: Commit $j créé et ajouté"
-            fi
-        done
+    # Crée une nouvelle branche pour chaque thread
+    git checkout -b "thread_branch_$thread_id"
 
-        # Fusionner la branche du thread dans main
-        git checkout main
-        git merge --no-ff "$thread_branch" -m "Fusion de $thread_branch dans main"
-        git branch -D "$thread_branch" # Supprimer la branche du thread
+    while [ $count -le $contribution_count ]; do
+        # Crée un fichier de contribution
+        contribution_file="contributions/thread_${thread_id}/commit_${count}.txt"
+        mkdir -p "$(dirname "$contribution_file")"
+        echo "Contribution #${count} du thread #${thread_id}" > "$contribution_file"
 
-    ) &
+        # Ajout au commit
+        git add "$contribution_file"
+
+        # Gestion du verrou pour le commit
+        (
+            flock -n 9 || exit 1
+
+            # Création du commit
+            git commit -m "Thread ${thread_id}: Commit ${count} créé et ajouté"
+
+        ) 9>"$LOCKFILE" # Redirige le fichier de verrou
+
+        if [[ $? -eq 1 ]]; then
+            echo "Thread ${thread_id}: en attente pour le verrou sur le commit ${count}"
+            sleep 1
+            continue
+        fi
+
+        if [[ $show_threads == "oui" ]]; then
+            echo "Thread ${thread_id}: Commit ${count} créé et ajouté"
+        fi
+
+        count=$((count + 1))
+    done
+
+    # Pousse les changements pour chaque branche
+    git push -u origin "thread_branch_$thread_id"
+}
+
+# Lancement des threads
+for ((i=0; i<thread_count; i++)); do
+    commit_contribution "$i" &
 done
 
-# Attendre la fin de tous les threads
 wait
 
-# Pousser les contributions par lot
-echo "Envoi des contributions en cours..."
-git push origin main --force
+# Nettoyage du fichier de verrou
+rm -f "$LOCKFILE"
+
+echo "Tous les commits ont été créés et poussés."
