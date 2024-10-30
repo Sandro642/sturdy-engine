@@ -1,50 +1,51 @@
 #!/bin/bash
 
-# Demander les informations à l'utilisateur
+# Demande des informations utilisateur
 read -p "Entrez votre pseudo GitHub : " GITHUB_USERNAME
 read -p "Entrez le nom du dépôt distant : " REPO_NAME
 read -p "Entrez le nombre de contributions : " CONTRIBUTIONS
 read -p "Entrez le nombre de threads : " THREADS
-read -p "Entrez votre token GitHub : " GITHUB_TOKEN
-
-# Demander à l'utilisateur s'il souhaite voir les threads
+read -sp "Entrez votre token GitHub : " GITHUB_TOKEN
+echo ""
 read -p "Voulez-vous voir les $THREADS threads ? (oui/non) : " SEE_THREADS
+
+# Fonction pour vérifier les erreurs
+check_error() {
+    if [ $? -ne 0 ]; then
+        echo "Une erreur est survenue."
+        exit 1
+    fi
+}
 
 # Lancer les threads
 for ((i = 0; i < THREADS; i++)); do
-    # Si l'utilisateur veut voir les threads, ouvrez une nouvelle fenêtre de terminal
+    THREAD_DIR="contributions/thread_$i"  # Dossier du thread
+    THREAD_BRANCH="thread_branch_$i"       # Branche spécifique pour chaque thread
+    mkdir -p "$THREAD_DIR"                 # Créer le dossier
+    check_error                            # Vérifie si le dossier a bien été créé
+
+    # Lancer le thread dans un terminal ou en arrière-plan selon le choix de l'utilisateur
     if [[ "$SEE_THREADS" == "oui" ]]; then
-        # Ouvrir une nouvelle fenêtre de terminal et exécuter le script de commit
-        gnome-terminal -- bash -c "./commit_thread.sh \"$GITHUB_USERNAME\" \"$REPO_NAME\" $((CONTRIBUTIONS / THREADS)) \"$GITHUB_TOKEN\" \"contributions/thread_$i\"; exec bash"
+        start bash -c "./commit_thread.sh \"$GITHUB_USERNAME\" \"$REPO_NAME\" $((CONTRIBUTIONS / THREADS)) \"$GITHUB_TOKEN\" \"$THREAD_DIR\" \"$THREAD_BRANCH\"; exec bash"
     else
-        # Exécuter le script de commit en arrière-plan
-        ./commit_thread.sh "$GITHUB_USERNAME" "$REPO_NAME" $((CONTRIBUTIONS / THREADS)) "$GITHUB_TOKEN" "contributions/thread_$i" &
+        ./commit_thread.sh "$GITHUB_USERNAME" "$REPO_NAME" $((CONTRIBUTIONS / THREADS)) "$GITHUB_TOKEN" "$THREAD_DIR" "$THREAD_BRANCH" &
     fi
 done
 
 # Attendre que tous les threads se terminent
 wait
 
-echo "Tous les commits ont été réalisés et poussés."
-
-# Supprimer les dossiers des threads localement
+# Fusionner chaque branche de thread dans la branche principale
 for ((i = 0; i < THREADS; i++)); do
-    # Supprimer le dossier des contributions pour chaque thread
-    rm -rf "contributions/thread_$i"
+    THREAD_BRANCH="thread_branch_$i"
+    git checkout main
+    git merge "$THREAD_BRANCH" -m "Fusionner $THREAD_BRANCH dans main"
+    check_error
 done
 
-# Supprimer les dossiers des threads dans le dépôt distant
-# Vérifiez si le dépôt distant existe
-if git ls-remote --exit-code origin &> /dev/null; then
-    # Supprimer les dossiers dans le dépôt distant
-    for ((i = 0; i < THREADS; i++)); do
-        # Utiliser la commande git pour supprimer le dossier des contributions à distance
-        git rm -r "contributions/thread_$i"
-    done
-    git commit -m "Supprimer les dossiers des threads après les commits"
-    git push origin main
-else
-    echo "Le dépôt distant n'est pas accessible."
-fi
+# Pousser les modifications dans la branche principale
+git push origin main
+check_error
 
-echo "Les dossiers des threads ont été supprimés."
+# Message final
+echo "Les contributions ont été fusionnées et poussées dans la branche principale."
