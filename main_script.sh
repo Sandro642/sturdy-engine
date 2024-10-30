@@ -55,10 +55,9 @@ for ((i=1; i<=THREADS; i++)); do
   git checkout main
 done
 
-# Ne pas supprimer les branches pour garder les logs
-# for ((i=1; i<=THREADS; i++)); do
-#   git branch -d "thread-$i"
-# done
+for ((i=1; i<=THREADS; i++)); do
+  git branch -d "thread-$i"
+done
 
 echo "Processus terminé. Appuyez sur une touche pour quitter..."
 read -n 1 -s  # Attend que l'utilisateur appuie sur une touche
