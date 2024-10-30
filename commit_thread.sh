@@ -1,36 +1,23 @@
 #!/bin/bash
 
-# Vérifier les arguments
-if [ "$#" -ne 4 ]; then
-  echo "Usage: $0 <GITHUB_USER> <REPO_NAME> <COMMITS_PER_THREAD> <GITHUB_TOKEN>"
-  exit 1
-fi
-
+# Récupérer les arguments
 GITHUB_USER=$1
 REPO_NAME=$2
-COMMITS_PER_THREAD=$3
+COMMITS=$3
 GITHUB_TOKEN=$4
 
-# Changer dans le dossier des contributions
-cd contributions || exit
+# Boucle pour effectuer les commits
+for ((i=1; i<=COMMITS; i++)); do
+  # Créer un fichier de contribution
+  echo "Contribution $i" > "contributions/contribution_thread_$i.txt"
+  
+  # Ajouter le fichier et faire un commit
+  git add "contributions/contribution_thread_$i.txt"
+  git commit -m "Contribution $i de $GITHUB_USER"
 
-# Exécuter les commits
-for ((i=1; i<=COMMITS_PER_THREAD; i++)); do
-  # Créer un fichier de commit avec un contenu aléatoire
-  echo "Contribution de commit $i dans le thread..." > "contribution_thread_$i.txt"
-  
-  # Ajouter le fichier au dépôt
-  git add "contribution_thread_$i.txt"
-  
-  # Faire un commit
-  git commit -m "Contribution de commit $i dans le thread"
-  
-  # Afficher l'état actuel
-  git status
+  # Simuler un délai pour représenter le travail effectué
+  sleep 1
 done
 
-# Revenir au répertoire principal
-cd ..
-
-# Terminer le script
-exit 0
+# Pousser les contributions vers le dépôt distant
+git push origin main
