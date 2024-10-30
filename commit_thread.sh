@@ -8,7 +8,6 @@ GITHUB_TOKEN=$4
 
 # Créer un fichier pour stocker les contributions
 CONTRIBUTION_FILE="contributions/contribution_thread_$(basename "$0" .sh).txt"
-mkdir -p "$(dirname "$CONTRIBUTION_FILE")" # S'assurer que le dossier existe
 touch $CONTRIBUTION_FILE
 
 # Effectuer les commits
