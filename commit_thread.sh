@@ -8,7 +8,7 @@ GITHUB_TOKEN=$4
 # Créer des contributions
 for ((i=1; i<=COMMITS; i++)); do
   # Créer un fichier de contribution
-  echo "Contribution $i" > "contributions/contribution_thread_$i.txt"
+  echo "Contribution $i de $GITHUB_USER dans le dépôt $REPO_NAME" > "contributions/contribution_thread_$i.txt"
   
   # Ajouter le fichier à l'index
   git add "contributions/contribution_thread_$i.txt"

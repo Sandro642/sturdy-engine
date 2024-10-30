@@ -41,7 +41,8 @@ for ((i=1; i<=THREADS; i++)); do
   git checkout -b $THREAD_BRANCH
   
   # Exécuter le script de thread dans un terminal séparé
-  start cmd /c "bash commit_thread.sh $GITHUB_USER $REPO_NAME $COMMITS_PER_THREAD $GITHUB_TOKEN; read -p 'Press any key to continue...'" &
+  # Utilisation de cmd pour Windows
+  start cmd /k "bash commit_thread.sh $GITHUB_USER $REPO_NAME $COMMITS_PER_THREAD $GITHUB_TOKEN; pause" &
   
   # Revenir à la branche principale
   git checkout main
