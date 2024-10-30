@@ -40,11 +40,8 @@ for ((i=1; i<=THREADS; i++)); do
   THREAD_BRANCH="thread-$i"
   git checkout -b $THREAD_BRANCH
   
-  # Exécuter le script de thread dans un terminal séparé
+  # Exécuter le script de thread dans un terminal séparé avec redirection de la sortie
   start cmd /k "bash commit_thread.sh $GITHUB_USER $REPO_NAME $COMMITS_PER_THREAD $GITHUB_TOKEN; pause" &
-  
-  # Pause pour éviter des conflits de branche
-  sleep 1
   
   # Revenir à la branche principale
   git checkout main
@@ -54,10 +51,5 @@ done
 for ((i=1; i<=THREADS; i++)); do
   git branch -d "thread-$i"
 done
-
-# Pousser les changements vers le dépôt distant
-git add .
-git commit -m "Supprimer le dossier de contributions"
-git push origin main
 
 echo "Processus terminé."

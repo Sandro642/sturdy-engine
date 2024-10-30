@@ -20,6 +20,7 @@ for ((i=1; i<=COMMITS; i++)); do
   git commit -m "Ajout de contribution $i de $GITHUB_USER"
   
   echo "Contribution $i ajoutée."
+  sleep 1 # Ajouter un délai pour éviter les conflits
 done
 
 # Pousser les changements vers le dépôt distant
