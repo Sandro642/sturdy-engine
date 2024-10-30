@@ -1,68 +1,70 @@
 #!/bin/bash
 
-# Variables
-read -p "Entrez votre pseudo GitHub : " github_user
-read -p "Entrez le nom du dépôt distant : " repo_name
-read -p "Entrez le nombre de contributions : " contribution_count
-read -p "Entrez le nombre de threads : " thread_count
-read -s -p "Entrez votre token GitHub : " github_token
-echo ""
-read -p "Voulez-vous voir les threads ? (oui/non) : " show_threads
-
-# Crée un verrou temporaire
-LOCKFILE=.git_commit_lock
-
-# Fonction pour gérer les commits
-function commit_contribution() {
-    local thread_id=$1
-    local count=1
-
-    # Crée une nouvelle branche pour chaque thread
-    git checkout -b "thread_branch_$thread_id"
-
-    while [ $count -le $contribution_count ]; do
-        # Crée un fichier de contribution
-        contribution_file="contributions/thread_${thread_id}/commit_${count}.txt"
-        mkdir -p "$(dirname "$contribution_file")"
-        echo "Contribution #${count} du thread #${thread_id}" > "$contribution_file"
-
-        # Ajout au commit
-        git add "$contribution_file"
-
-        # Gestion du verrou pour le commit
-        (
-            flock -n 9 || exit 1
-
-            # Création du commit
-            git commit -m "Thread ${thread_id}: Commit ${count} créé et ajouté"
-
-        ) 9>"$LOCKFILE" # Redirige le fichier de verrou
-
-        if [[ $? -eq 1 ]]; then
-            echo "Thread ${thread_id}: en attente pour le verrou sur le commit ${count}"
-            sleep 1
-            continue
-        fi
-
-        if [[ $show_threads == "oui" ]]; then
-            echo "Thread ${thread_id}: Commit ${count} créé et ajouté"
-        fi
-
-        count=$((count + 1))
-    done
-
-    # Pousse les changements pour chaque branche
-    git push -u origin "thread_branch_$thread_id"
+# Fonction pour vérifier si le dossier est un dépôt Git
+check_git_repo() {
+  if [ ! -d ".git" ]; then
+    echo "Initialisation d'un nouveau dépôt Git..."
+    git init
+  fi
 }
 
-# Lancement des threads
-for ((i=0; i<thread_count; i++)); do
-    commit_contribution "$i" &
+# Demander les informations à l'utilisateur
+read -p "Nom d'utilisateur GitHub : " GITHUB_USER
+read -p "Nom du dépôt distant : " REPO_NAME
+read -p "Nombre de commits : " TOTAL_COMMITS
+read -p "Nombre de threads : " THREADS
+read -p "Token GitHub : " GITHUB_TOKEN
+
+# Vérification du dossier et initialisation si nécessaire
+check_git_repo
+
+# Ajouter le dépôt distant
+git remote add origin "https://github.com/$GITHUB_USER/$REPO_NAME.git"
+
+# Calculer le nombre de commits par thread
+COMMITS_PER_THREAD=$((TOTAL_COMMITS / THREADS))
+
+# Créer un dossier pour les contributions
+mkdir contributions
+
+# Créer et lancer les threads
+for ((i=1; i<=THREADS; i++)); do
+  # Créer une branche pour chaque thread
+  THREAD_BRANCH="thread-$i"
+  git checkout -b $THREAD_BRANCH
+  
+  # Exécuter le script de thread dans un terminal séparé
+  start "Thread $i" bash -c "./commit_thread.sh $GITHUB_USER $REPO_NAME $COMMITS_PER_THREAD $GITHUB_TOKEN; read -p 'Press any key to continue...' var" &
+  
+  # Revenir à la branche principale
+  git checkout main
 done
 
-wait
+# Demander si l'utilisateur veut voir les processus des threads
+read -p "Voulez-vous voir les processus des threads en cours (O/N) ? " VIEW_THREADS
+if [[ $VIEW_THREADS =~ ^[Oo]$ ]]; then
+  for ((i=1; i<=THREADS; i++)); do
+    start "Processus du thread $i" bash -c "echo 'Processus du thread $i'; tail -f contributions/contribution_thread_$i.txt; read -p 'Press any key to continue...' var" &
+  done
+fi
 
-# Nettoyage du fichier de verrou
-rm -f "$LOCKFILE"
+# Attendre que tous les threads soient terminés avant de fusionner
+for ((i=1; i<=THREADS; i++)); do
+  THREAD_BRANCH="thread-$i"
+  
+  # Fusionner chaque branche de thread dans la branche principale
+  git merge $THREAD_BRANCH
+  # Supprimer la branche de thread
+  git branch -d $THREAD_BRANCH
+done
 
-echo "Tous les commits ont été créés et poussés."
+# Pousser les modifications vers le dépôt distant
+git push -u origin main
+
+# Supprimer le dossier des contributions localement
+rm -rf contributions
+
+# Supprimer le dossier des contributions dans le dépôt distant
+git rm -r contributions
+git commit -m "Supprimer le dossier de contributions"
+git push origin main
