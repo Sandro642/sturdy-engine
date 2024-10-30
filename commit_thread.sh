@@ -15,6 +15,8 @@ for ((i=1; i<=COMMITS; i++)); do
   
   # Faire un commit
   git commit -m "Ajout de contribution $i de $GITHUB_USER"
+  
+  echo "Contribution $i ajoutée."
 done
 
 # Pousser les changements vers le dépôt distant

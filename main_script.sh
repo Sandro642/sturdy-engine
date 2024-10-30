@@ -53,9 +53,6 @@ for ((i=1; i<=THREADS; i++)); do
   git branch -d "thread-$i"
 done
 
-# Suppression du dossier de contributions après les commits
-rm -rf contributions
-
 # Pousser les changements vers le dépôt distant
 git add .
 git commit -m "Supprimer le dossier de contributions"
