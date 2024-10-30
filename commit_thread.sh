@@ -27,3 +27,12 @@ done
 git push origin main
 
 echo "Contributions terminées pour le thread."
+
+# Demander si l'utilisateur veut fermer la fenêtre
+read -p "Voulez-vous fermer cette fenêtre ? (O/N) " CLOSE_WINDOW
+if [[ $CLOSE_WINDOW =~ ^[Oo]$ ]]; then
+  exit 0
+else
+  echo "La fenêtre restera ouverte."
+  read -p "Appuyez sur une touche pour continuer..."
+fi
