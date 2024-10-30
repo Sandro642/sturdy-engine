@@ -22,7 +22,7 @@ check_git_repo
 git remote add origin "https://github.com/$GITHUB_USER/$REPO_NAME.git" 2>/dev/null || echo "Le dépôt distant existe déjà."
 
 # Calculer le nombre de commits par thread
-COMMITS_PER_THREAD=$(( (TOTAL_COMMITS + THREADS - 1) / THREADS )) # On s'assure de répartir les commits correctement
+COMMITS_PER_THREAD=$(( (TOTAL_COMMITS + THREADS - 1) / THREADS ))
 
 # Créer un dossier pour les contributions
 mkdir -p contributions
@@ -39,10 +39,10 @@ if [[ $START_CONTRIBUTIONS =~ ^[Oo]$ ]]; then
     # Créer une branche pour chaque thread
     THREAD_BRANCH="thread-$i"
     git checkout -b $THREAD_BRANCH
-    
+
     # Exécuter le script de thread dans un terminal séparé (si l'utilisateur a choisi de voir les processus)
     if [[ $VIEW_THREADS =~ ^[Oo]$ ]]; then
-      start "Thread $i" bash -c "./commit_thread.sh $GITHUB_USER $REPO_NAME $COMMITS_PER_THREAD $GITHUB_TOKEN; read -p 'Press any key to continue...' var" &
+      gnome-terminal -- bash -c "./commit_thread.sh $GITHUB_USER $REPO_NAME $COMMITS_PER_THREAD $GITHUB_TOKEN; read -p 'Press any key to continue...'" &
     else
       ./commit_thread.sh $GITHUB_USER $REPO_NAME $COMMITS_PER_THREAD $GITHUB_TOKEN
     fi
@@ -50,13 +50,6 @@ if [[ $START_CONTRIBUTIONS =~ ^[Oo]$ ]]; then
     # Revenir à la branche principale
     git checkout main
   done
-
-  # Si l'utilisateur a choisi de voir les processus, on demande de continuer
-  if [[ $VIEW_THREADS =~ ^[Oo]$ ]]; then
-    for ((i=1; i<=THREADS; i++)); do
-      start "Processus du thread $i" bash -c "echo 'Processus du thread $i'; tail -f contributions/contribution_thread_$i.txt; read -p 'Press any key to continue...' var" &
-    done
-  fi
 
   # Attendre que tous les threads soient terminés avant de fusionner
   for ((i=1; i<=THREADS; i++)); do
