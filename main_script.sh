@@ -49,7 +49,7 @@ for ((i=1; i<=THREADS; i++)); do
   fi
 
   # Exécuter le script de thread dans un nouveau terminal et garder la fenêtre ouverte
-  start cmd /k "bash commit_thread.sh \"$GITHUB_USER\" \"$REPO_NAME\" \"$THREAD_COMMITS\" \"$GITHUB_TOKEN\""
+  start bash commit_thread.sh "$GITHUB_USER" "$REPO_NAME" "$THREAD_COMMITS" "$GITHUB_TOKEN"
 
   # Revenir à la branche principale
   git checkout main
