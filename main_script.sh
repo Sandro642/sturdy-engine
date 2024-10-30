@@ -48,16 +48,17 @@ for ((i=1; i<=THREADS; i++)); do
     THREAD_COMMITS=$COMMITS_PER_THREAD
   fi
 
-  # Exécuter le script de thread dans un nouveau terminal
-  start bash commit_thread.sh "$GITHUB_USER" "$REPO_NAME" "$THREAD_COMMITS" "$GITHUB_TOKEN"
+  # Exécuter le script de thread dans un nouveau terminal et garder la fenêtre ouverte
+  start cmd /k "bash commit_thread.sh \"$GITHUB_USER\" \"$REPO_NAME\" \"$THREAD_COMMITS\" \"$GITHUB_TOKEN\""
 
   # Revenir à la branche principale
   git checkout main
 done
 
-# Suppression des branches après exécution
-for ((i=1; i<=THREADS; i++)); do
-  git branch -d "thread-$i"
-done
+# Ne pas supprimer les branches pour garder les logs
+# for ((i=1; i<=THREADS; i++)); do
+#   git branch -d "thread-$i"
+# done
 
-echo "Processus terminé."
+echo "Processus terminé. Appuyez sur une touche pour quitter..."
+read -n 1 -s  # Attend que l'utilisateur appuie sur une touche
