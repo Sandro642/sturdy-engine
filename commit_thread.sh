@@ -5,6 +5,9 @@ REPO_NAME=$2
 COMMITS=$3
 GITHUB_TOKEN=$4
 
+# Créer un dossier pour les contributions si ce n'est pas déjà fait
+mkdir -p contributions
+
 # Créer des contributions
 for ((i=1; i<=COMMITS; i++)); do
   # Créer un fichier de contribution
