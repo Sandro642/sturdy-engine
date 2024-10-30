@@ -22,7 +22,7 @@ check_git_repo
 git remote add origin "https://github.com/$GITHUB_USER/$REPO_NAME.git" 2>/dev/null || echo "Le dépôt distant existe déjà."
 
 # Calculer le nombre de commits par thread
-COMMITS_PER_THREAD=$(( (TOTAL_COMMITS + THREADS - 1) / THREADS )) # On s'assure de répartir les commits correctement
+COMMITS_PER_THREAD=$(( (TOTAL_COMMITS + THREADS - 1) / THREADS ))
 
 # Créer un dossier pour les contributions
 mkdir -p contributions
@@ -39,10 +39,10 @@ for ((i=1; i<=THREADS; i++)); do
   # Créer une branche pour chaque thread
   THREAD_BRANCH="thread-$i"
   git checkout -b $THREAD_BRANCH
-  
-  # Exécuter le script de thread dans un terminal séparé avec redirection de la sortie
-  start cmd /k "bash commit_thread.sh $GITHUB_USER $REPO_NAME $COMMITS_PER_THREAD $GITHUB_TOKEN; pause" &
-  
+
+  # Exécuter le script de thread dans un nouveau terminal
+  start bash commit_thread.sh "$GITHUB_USER" "$REPO_NAME" "$COMMITS_PER_THREAD" "$GITHUB_TOKEN"
+
   # Revenir à la branche principale
   git checkout main
 done
